@@ -17,7 +17,7 @@
 #include QMK_KEYBOARD_H
 
 
-enum layers{
+enum layers {
   MAC_BASE,
   MAC_FN,
   WIN_BASE,
@@ -31,9 +31,9 @@ enum custom_keycodes {
 #define KC_TASK LGUI(KC_TAB)
 #define KC_FLXP LGUI(KC_E)
 
-void switch_override(keyrecord_t* record, uint16_t from, uint16_t to)
+void switch_key(keyrecord_t* record, uint16_t from, uint16_t to)
 {
-    // Register and deregister override keys in reverse order
+    // Register and deregister switched keys in reverse order
     if (record->event.pressed)
     {
         unregister_code(from);
@@ -48,63 +48,83 @@ void switch_override(keyrecord_t* record, uint16_t from, uint16_t to)
 
 bool process_record_user(uint16_t keycode, keyrecord_t* record)
 {
-    // Set state variables
-    static bool win_cmd_active = false;
-    static bool win_cmdtab_active = false;
-    
-    // Exit win_cmdtab state and bail if key is not tab
-    if (win_cmdtab_active && keycode != KC_TAB)
+    // Define states for FSM
+    enum key_states {
+        NONE_STATE,
+        WIN_CMD_STATE,
+        WIN_CMDTAB_STATE
+    };
+
+    // Set intial state
+    static enum key_states state = NONE_STATE;
+
+    // Define state transitions
+    void enter_state_none(void)
     {
+        unregister_code(KC_LCTL);
         unregister_code(KC_LALT);
-        win_cmdtab_active = false;
-        
-        // Re-enter win_cmd state if cmd key not released
-        if (keycode != WIN_CMD)
-        {
-            register_code(KC_LCTL);
-            win_cmd_active = true;
-            return false;
-        }
+        state = NONE_STATE;
     }
 
-    switch (keycode)
+    void enter_state_cmd(void)
     {
-        case WIN_CMD:
-            // Set win_cmd state and register lctrl
-            win_cmd_active = record->event.pressed;
-            if (win_cmd_active) register_code(KC_LCTL);
-            else unregister_code(KC_LCTL);
-            break;
-        case KC_LEFT:
-            if (!win_cmd_active) break;
-            switch_override(record, KC_LCTL, KC_HOME);
-            return false;
-        case KC_RGHT:
-            if (!win_cmd_active) break;
-            switch_override(record, KC_LCTL, KC_END);
-            return false;
-        case KC_UP:
-            if (!win_cmd_active) break;
-            switch_override(record, KC_LCTL, KC_PGUP);
-            return false;
-        case KC_DOWN:
-            if (!win_cmd_active) break;
-            switch_override(record, KC_LCTL, KC_PGDN);
-            return false;
-        case KC_TAB:
-            if (!win_cmd_active) break;
-            // Switch from win_cmd to win_cmdtab state on tab
-            if (record->event.pressed && !win_cmdtab_active)
+        unregister_code(KC_LALT);
+        register_code(KC_LCTL);
+        state = WIN_CMD_STATE;
+    }
+
+    void enter_state_cmdtab(void)
+    {
+        unregister_code(KC_LCTL);
+        register_code(KC_LALT);
+        state = WIN_CMDTAB_STATE;
+    }
+
+    // Run state update for key event
+    switch (state)
+    {
+        case NONE_STATE:
+            if (keycode == WIN_CMD && record->event.pressed)
             {
-                unregister_code(KC_LCTL);
-                win_cmd_active = false;
-                register_code(KC_LALT);
-                win_cmdtab_active = true;
-                // Allow pass-through for tab
+                enter_state_cmd();
+            }
+            break;
+        case WIN_CMD_STATE:
+            switch (keycode)
+            {
+                case WIN_CMD:
+                    if (!record->event.pressed) enter_state_none();
+                    break;
+                case KC_LEFT:
+                    switch_key(record, KC_LCTL, KC_HOME);
+                    return false;
+                case KC_RGHT:
+                    switch_key(record, KC_LCTL, KC_END);
+                    return false;
+                case KC_UP:
+                    switch_key(record, KC_LCTL, KC_PGUP);
+                    return false;
+                case KC_DOWN:
+                    switch_key(record, KC_LCTL, KC_PGDN);
+                    return false;
+                case KC_TAB:
+                    if (record->event.pressed) enter_state_cmdtab();
+                    // Allow pass-through for tab
+                    break;
+            }
+            break;
+        case WIN_CMDTAB_STATE:
+            if (keycode == WIN_CMD && !record->event.pressed)
+            {
+                enter_state_none();
+            }
+            else if (keycode != KC_TAB)
+            {
+                enter_state_cmd();
+                return false;
             }
             break;
     }
-
     return true;
 }
 
