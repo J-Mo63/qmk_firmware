@@ -57,7 +57,14 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record)
     {
         unregister_code(KC_LALT);
         win_cmdtab_active = false;
-        return false;
+        
+        // Re-enter win_cmd state if cmd key not released
+        if (keycode != WIN_CMD)
+        {
+            register_code(KC_LCTL);
+            win_cmd_active = true;
+            return false;
+        }
     }
 
     switch (keycode)
