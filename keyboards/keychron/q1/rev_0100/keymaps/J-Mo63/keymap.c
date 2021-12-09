@@ -25,7 +25,8 @@ enum layers {
 };
 
 enum custom_keycodes {
-    WIN_CMD = SAFE_RANGE
+    WIN_CMD = SAFE_RANGE,
+    MOUSE
 };
 
 #define KC_TASK LGUI(KC_TAB)
@@ -52,7 +53,8 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record)
     enum key_states {
         NONE_STATE,
         WIN_CMD_STATE,
-        WIN_CMDTAB_STATE
+        WIN_CMDTAB_STATE,
+        MOUSE_STATE
     };
 
     // Set intial state
@@ -80,6 +82,13 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record)
         state = WIN_CMDTAB_STATE;
     }
 
+    void enter_state_mouse(void)
+    {
+        unregister_code(KC_LCTL);
+        unregister_code(KC_LALT);
+        state = MOUSE_STATE;
+    }
+
     // Run state update for key event
     switch (state)
     {
@@ -87,6 +96,10 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record)
             if (keycode == WIN_CMD && record->event.pressed)
             {
                 enter_state_cmd();
+            }
+            else if (keycode == MOUSE && record->event.pressed)
+            {
+                enter_state_mouse();
             }
             break;
         case WIN_CMD_STATE:
@@ -124,6 +137,48 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record)
                 return false;
             }
             break;
+        case MOUSE_STATE:
+            switch (keycode)
+            {
+                case MOUSE:
+                    if (!record->event.pressed)
+                    {
+                        // Unregister all potential mouse events
+                        unregister_code(KC_MS_LEFT);
+                        unregister_code(KC_MS_RIGHT);
+                        unregister_code(KC_MS_UP);
+                        unregister_code(KC_MS_DOWN);
+                        unregister_code(KC_MS_BTN1);
+                        unregister_code(KC_MS_BTN2);
+                        enter_state_none();
+                    }
+                    break;
+                case KC_LEFT:
+                    if (record->event.pressed) register_code(KC_MS_LEFT);
+                    else unregister_code(KC_MS_LEFT);
+                    return false;
+                case KC_RGHT:
+                    if (record->event.pressed) register_code(KC_MS_RIGHT);
+                    else unregister_code(KC_MS_RIGHT);
+                    return false;
+                case KC_UP:
+                    if (record->event.pressed) register_code(KC_MS_UP);
+                    else unregister_code(KC_MS_UP);
+                    return false;
+                case KC_DOWN:
+                    if (record->event.pressed) register_code(KC_MS_DOWN);
+                    else unregister_code(KC_MS_DOWN);
+                    return false;
+                case KC_RCTL:
+                    if (record->event.pressed) register_code(KC_MS_BTN1);
+                    else unregister_code(KC_MS_BTN1);
+                    return false;
+                case KC_RSFT:
+                    if (record->event.pressed) register_code(KC_MS_BTN2);
+                    else unregister_code(KC_MS_BTN2);
+                    return false;
+            }
+            break;
     }
     return true;
 }
@@ -134,7 +189,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
      KC_ESC,             KC_BRID,  KC_BRIU,  KC_F3,    KC_F4,    RGB_VAD,  RGB_VAI,  KC_MPRV,  KC_MPLY,  KC_MNXT,  KC_MUTE,  KC_VOLD,  KC_VOLU,  KC_DEL,   KC_NO,
      KC_GRV,   KC_1,     KC_2,     KC_3,     KC_4,     KC_5,     KC_6,     KC_7,     KC_8,     KC_9,     KC_0,     KC_MINS,  KC_EQL,   KC_BSPC,            KC_PGUP,
      KC_TAB,   KC_Q,     KC_W,     KC_E,     KC_R,     KC_T,     KC_Y,     KC_U,     KC_I,     KC_O,     KC_P,     KC_LBRC,  KC_RBRC,  KC_BSLS,            KC_PGDN,
-     KC_NO,    KC_A,     KC_S,     KC_D,     KC_F,     KC_G,     KC_H,     KC_J,     KC_K,     KC_L,     KC_SCLN,  KC_QUOT,            KC_ENT,             KC_HOME,
+     MOUSE,    KC_A,     KC_S,     KC_D,     KC_F,     KC_G,     KC_H,     KC_J,     KC_K,     KC_L,     KC_SCLN,  KC_QUOT,            KC_ENT,             KC_HOME,
      KC_LSFT,            KC_Z,     KC_X,     KC_C,     KC_V,     KC_B,     KC_N,     KC_M,     KC_COMM,  KC_DOT,   KC_SLSH,            KC_RSFT,  KC_UP,
      KC_LCTL,  KC_LALT,  KC_LGUI,                                KC_SPC,                                 KC_RGUI, MO(MAC_FN),KC_RCTL,  KC_LEFT,  KC_DOWN,  KC_RGHT),
 
@@ -150,7 +205,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
      KC_ESC,             KC_F1,    KC_F2,    KC_F3,    KC_F4,    KC_F5,    KC_F6,    KC_F7,    KC_F8,    KC_F9,    KC_F10,   KC_F11,   KC_F12,   KC_DEL,   KC_NO,
      KC_GRV,   KC_1,     KC_2,     KC_3,     KC_4,     KC_5,     KC_6,     KC_7,     KC_8,     KC_9,     KC_0,     KC_MINS,  KC_EQL,   KC_BSPC,            KC_PGUP,
      KC_TAB,   KC_Q,     KC_W,     KC_E,     KC_R,     KC_T,     KC_Y,     KC_U,     KC_I,     KC_O,     KC_P,     KC_LBRC,  KC_RBRC,  KC_BSLS,            KC_PGDN,
-     KC_NO,    KC_A,     KC_S,     KC_D,     KC_F,     KC_G,     KC_H,     KC_J,     KC_K,     KC_L,     KC_SCLN,  KC_QUOT,            KC_ENT,             KC_HOME,
+     MOUSE,    KC_A,     KC_S,     KC_D,     KC_F,     KC_G,     KC_H,     KC_J,     KC_K,     KC_L,     KC_SCLN,  KC_QUOT,            KC_ENT,             KC_HOME,
      KC_LSFT,            KC_Z,     KC_X,     KC_C,     KC_V,     KC_B,     KC_N,     KC_M,     KC_COMM,  KC_DOT,   KC_SLSH,            KC_RSFT,  KC_UP,
      KC_LGUI,  KC_LALT,  WIN_CMD,                                KC_SPC,                                 KC_RALT, MO(WIN_FN),KC_RCTL,  KC_LEFT,  KC_DOWN,  KC_RGHT),
 
