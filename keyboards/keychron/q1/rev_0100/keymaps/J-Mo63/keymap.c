@@ -26,6 +26,7 @@ enum layers {
 
 enum custom_keycodes {
     WIN_CMD = SAFE_RANGE,
+    WIN_CTRL,
     MOUSE
 };
 
@@ -54,6 +55,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record)
         NONE_STATE,
         WIN_CMD_STATE,
         WIN_CMDTAB_STATE,
+        WIN_CTRL_STATE,
         MOUSE_STATE
     };
 
@@ -63,6 +65,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record)
     // Define state transitions
     void enter_state_none(void)
     {
+        unregister_code(KC_LGUI);
         unregister_code(KC_LCTL);
         unregister_code(KC_LALT);
         state = NONE_STATE;
@@ -70,6 +73,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record)
 
     void enter_state_cmd(void)
     {
+        unregister_code(KC_LGUI);
         unregister_code(KC_LALT);
         register_code(KC_LCTL);
         state = WIN_CMD_STATE;
@@ -77,13 +81,23 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record)
 
     void enter_state_cmdtab(void)
     {
+        unregister_code(KC_LGUI);
         unregister_code(KC_LCTL);
         register_code(KC_LALT);
         state = WIN_CMDTAB_STATE;
     }
 
+    void enter_state_ctrl(void)
+    {
+        unregister_code(KC_LCTL);
+        unregister_code(KC_LALT);
+        register_code(KC_LGUI);
+        state = WIN_CTRL_STATE;
+    }
+
     void enter_state_mouse(void)
     {
+        unregister_code(KC_LGUI);
         unregister_code(KC_LCTL);
         unregister_code(KC_LALT);
         state = MOUSE_STATE;
@@ -96,6 +110,10 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record)
             if (keycode == WIN_CMD && record->event.pressed)
             {
                 enter_state_cmd();
+            }
+            else if (keycode == WIN_CTRL && record->event.pressed)
+            {
+                enter_state_ctrl();
             }
             else if (keycode == MOUSE && record->event.pressed)
             {
@@ -135,6 +153,20 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record)
             {
                 enter_state_cmd();
                 return false;
+            }
+            break;
+        case WIN_CTRL_STATE:
+            switch (keycode)
+            {
+                case WIN_CTRL:
+                    if (!record->event.pressed) enter_state_none();
+                    break;
+                // Add control key for workspace switch macro
+                case KC_LEFT:
+                case KC_RGHT:
+                    if (record->event.pressed) register_code(KC_LCTL);
+                    else unregister_code(KC_LCTL);
+                    break;
             }
             break;
         case MOUSE_STATE:
@@ -207,7 +239,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
      KC_TAB,   KC_Q,     KC_W,     KC_E,     KC_R,     KC_T,     KC_Y,     KC_U,     KC_I,     KC_O,     KC_P,     KC_LBRC,  KC_RBRC,  KC_BSLS,            KC_PGDN,
      MOUSE,    KC_A,     KC_S,     KC_D,     KC_F,     KC_G,     KC_H,     KC_J,     KC_K,     KC_L,     KC_SCLN,  KC_QUOT,            KC_ENT,             KC_HOME,
      KC_LSFT,            KC_Z,     KC_X,     KC_C,     KC_V,     KC_B,     KC_N,     KC_M,     KC_COMM,  KC_DOT,   KC_SLSH,            KC_RSFT,  KC_UP,
-     KC_LGUI,  KC_LALT,  WIN_CMD,                                KC_SPC,                                 KC_RALT, MO(WIN_FN),KC_RCTL,  KC_LEFT,  KC_DOWN,  KC_RGHT),
+     WIN_CTRL,  KC_LALT,  WIN_CMD,                                KC_SPC,                                 KC_RALT, MO(WIN_FN),KC_RCTL,  KC_LEFT,  KC_DOWN,  KC_RGHT),
 
 [WIN_FN] = LAYOUT_ansi_82( 
      KC_TRNS,            KC_BRID,  KC_BRIU,  KC_TASK,  KC_FLXP,  RGB_VAD,  RGB_VAI,  KC_MPRV,  KC_MPLY,  KC_MNXT,  KC_MUTE,  KC_VOLD,  KC_VOLU,  KC_TRNS,  KC_TRNS,
