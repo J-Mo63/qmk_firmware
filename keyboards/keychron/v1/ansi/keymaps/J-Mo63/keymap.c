@@ -162,6 +162,11 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record)
                 case WIN_CTRL:
                     if (!record->event.pressed) enter_state_none();
                     break;
+                // Add tab key for workspace view macro
+                case KC_UP:
+                case KC_DOWN:
+                    if (record->event.pressed) register_code(KC_TAB);
+                    else unregister_code(KC_TAB);
                 // Add control key for workspace switch macro
                 case KC_LEFT:
                 case KC_RGHT:
